@@ -6,4 +6,3 @@ edition = "2024"
 [dependencies]
 axum = "0.8.9"
 sqlite = "0.37.0"
-tailscale = "0.1.1"
