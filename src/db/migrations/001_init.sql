@@ -1,0 +1,1 @@
+create table links(alias TEXT PRIMARY KEY, url TEXT not null, user TEXT not null);
