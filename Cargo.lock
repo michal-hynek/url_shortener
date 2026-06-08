@@ -878,6 +878,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "r2d2",
  "r2d2_sqlite",
  "rusqlite",
  "serde",

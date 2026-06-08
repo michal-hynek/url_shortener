@@ -1,13 +1,21 @@
 use anyhow::Result;
 use axum::{Router, routing::post};
-use rusqlite::Connection;
+use r2d2::{Pool, PooledConnection};
+use r2d2_sqlite::SqliteConnectionManager;
 use tokio::net::TcpListener;
 
 mod api;
 
-fn run_db_migrations() -> Result<()> {
-    let db_path = "src/db/links.db";
-    let connection = Connection::open(db_path)?;
+fn init_db_pool(db_path: &str) -> Result<Pool<SqliteConnectionManager>> {
+    let manager = SqliteConnectionManager::file(db_path);
+    let pool = Pool::builder()
+        .max_size(10)
+        .build(manager)?;
+
+    Ok(pool)
+}
+
+fn run_db_migrations(connection: PooledConnection<SqliteConnectionManager>) -> Result<()> {
     let migrations = std::fs::read_dir("src/db/migrations")?;
 
     for entry in migrations {
@@ -24,10 +32,13 @@ fn run_db_migrations() -> Result<()> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    run_db_migrations()?;
+    let db_path = "src/db/links.db";
+    let db_pool = init_db_pool(&db_path)?;
+    run_db_migrations(db_pool.get()?)?;
 
     let app = Router::new()
-        .route("/link", post(crate::api::create_link));
+        .route("/link", post(crate::api::create_link))
+        .with_state(db_pool);
 
     let addr = "0.0.0.0:8000";
     let listener = TcpListener::bind(addr).await.unwrap();

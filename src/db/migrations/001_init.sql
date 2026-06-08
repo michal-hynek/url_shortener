@@ -1,1 +1,1 @@
-create table links(alias TEXT PRIMARY KEY, url TEXT not null, user TEXT not null);
+create table if not exists links(alias TEXT PRIMARY KEY, url TEXT not null, user TEXT not null);
