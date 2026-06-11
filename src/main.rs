@@ -4,6 +4,8 @@ use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::SqliteConnectionManager;
 use tokio::net::TcpListener;
 
+use crate::api::LinkRepository;
+
 mod api;
 
 fn init_db_pool(db_path: &str) -> Result<Pool<SqliteConnectionManager>> {
@@ -33,12 +35,13 @@ fn run_db_migrations(connection: PooledConnection<SqliteConnectionManager>) -> R
 #[tokio::main]
 async fn main() -> Result<()> {
     let db_path = "src/db/links.db";
-    let db_pool = init_db_pool(&db_path)?;
+    let db_pool = init_db_pool(db_path)?;
     run_db_migrations(db_pool.get()?)?;
 
+    let repository = LinkRepository::new(db_pool.clone());
     let app = Router::new()
         .route("/link", post(crate::api::create_link))
-        .with_state(db_pool);
+        .with_state(repository);
 
     let addr = "0.0.0.0:8000";
     let listener = TcpListener::bind(addr).await.unwrap();
