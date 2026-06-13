@@ -40,7 +40,7 @@ async fn main() -> Result<()> {
 
     let repository = LinkRepository::new(db_pool.clone());
     let app = Router::new()
-        .route("/link", post(crate::api::create_link))
+        .route("/links", post(crate::api::create_link))
         .with_state(repository);
 
     let addr = "0.0.0.0:8000";
