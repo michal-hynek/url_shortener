@@ -9,7 +9,7 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum ApiError {
     #[error("duplicate_alias")]
-    DuplicateAlias,
+    DuplicateAlias(String),
 
     #[error("internal")]
     Internal(#[from] anyhow::Error),
@@ -18,7 +18,7 @@ pub enum ApiError {
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, body) = match &self {
-            ApiError::DuplicateAlias => (StatusCode::CONFLICT, "duplicate alias".to_string()),
+            ApiError::DuplicateAlias(alias) => (StatusCode::CONFLICT, format!("duplicate alias {alias}").to_string()),
             ApiError::Internal(_) => (StatusCode::INTERNAL_SERVER_ERROR, "internal error".to_string()),
         };
 
@@ -81,7 +81,7 @@ impl LinkRepository {
             .optional()?;
 
         if alias_exists.is_some() {
-            return Err(ApiError::DuplicateAlias);
+            return Err(ApiError::DuplicateAlias(alias));
         }
 
         connection.execute(
