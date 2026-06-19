@@ -3,7 +3,7 @@ use axum::{Router, routing::post};
 use clap::Parser;
 use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::SqliteConnectionManager;
-use tokio::net::TcpListener;
+use tailscale::{Config, Device};
 
 use crate::api::LinkRepository;
 
@@ -47,11 +47,22 @@ async fn main() -> Result<()> {
         .route("/links", post(crate::api::create_link))
         .with_state(repository);
 
-    let addr = args.server_address;
-    let listener = TcpListener::bind(&addr).await.unwrap();
+    // tailscale setup
+    unsafe {
+        std::env::set_var("TS_RS_EXPERIMENT", "this_is_unstable_software");
+    }
+    let config = Config::default_with_key_file("tsrs_keys.json").await?;
+    let auth_key = std::env::var("TS_AUTHKEY").ok();
+    let dev = Device::new(&config, auth_key).await?;
 
-    println!("Listening on {}", &addr);
-    axum::serve(listener, app).await.unwrap();
+    println!("Starting up tailscale TCP listener");
+    let listener = dev
+        .tcp_listen((dev.ipv4_addr().await?, args.server_port).into())
+        .await?;
+    let url = format!("{}", listener.local_addr());
+    println!("Listening on {}", &url);
+
+    axum::serve(tailscale::axum::Listener::from(listener), app).await?;
 
     Ok(())
 }
