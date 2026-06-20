@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::Result;
 use axum::{Json, extract::State, http::StatusCode, response::{IntoResponse, Response}};
 use r2d2::Pool;
@@ -5,6 +7,8 @@ use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::OptionalExtension;
 use serde::Deserialize;
 use thiserror::Error;
+
+use crate::AppState;
 
 #[derive(Error, Debug)]
 pub enum ApiError {
@@ -93,8 +97,8 @@ impl LinkRepository {
     }
 }
 
-pub async fn create_link(State(repository): State<LinkRepository>,  Json(payload): Json<CreateLinkRequest>) -> Response {
-    match repository.create_link(payload.alias.clone(), payload.url, "test_user".into()).await {
+pub async fn create_link(State(app_state): State<Arc<AppState>>,  Json(payload): Json<CreateLinkRequest>) -> Response {
+    match app_state.repository.create_link(payload.alias.clone(), payload.url, "test_user".into()).await {
         Ok(_) => CreateLinkResponse { alias: payload.alias }.into_response(),
         Err(e) => {
             eprintln!("{:?}", e);

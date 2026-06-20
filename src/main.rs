@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::Result;
 use axum::{Router, routing::post};
 use clap::Parser;
@@ -9,6 +11,12 @@ use crate::api::LinkRepository;
 
 mod api;
 mod cli;
+
+#[derive(Clone)]
+struct AppState {
+    repository: LinkRepository,
+    ts_device: Arc<Device>,
+}
 
 fn init_db_pool(db_path: &str) -> Result<Pool<SqliteConnectionManager>> {
     let manager = SqliteConnectionManager::file(db_path);
@@ -42,11 +50,6 @@ async fn main() -> Result<()> {
     let db_pool = init_db_pool(&db_path)?;
     run_db_migrations(db_pool.get()?)?;
 
-    let repository = LinkRepository::new(db_pool.clone());
-    let app = Router::new()
-        .route("/links", post(crate::api::create_link))
-        .with_state(repository);
-
     // tailscale setup
     unsafe {
         std::env::set_var("TS_RS_EXPERIMENT", "this_is_unstable_software");
@@ -54,6 +57,16 @@ async fn main() -> Result<()> {
     let config = Config::default_with_key_file("tsrs_keys.json").await?;
     let auth_key = std::env::var("TS_AUTHKEY").ok();
     let dev = Device::new(&config, auth_key).await?;
+
+    let repository = LinkRepository::new(db_pool.clone());
+    let state = Arc::new(AppState {
+        repository,
+        ts_device: Arc::new(dev),
+    });
+
+    let app = Router::new()
+        .route("/links", post(crate::api::create_link))
+        .with_state(state);
 
     println!("Starting up tailscale TCP listener");
     let listener = dev
