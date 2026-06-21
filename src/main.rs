@@ -56,12 +56,12 @@ async fn main() -> Result<()> {
     }
     let config = Config::default_with_key_file("tsrs_keys.json").await?;
     let auth_key = std::env::var("TS_AUTHKEY").ok();
-    let dev = Device::new(&config, auth_key).await?;
+    let dev = Arc::new(Device::new(&config, auth_key).await?);
 
     let repository = LinkRepository::new(db_pool.clone());
     let state = Arc::new(AppState {
         repository,
-        ts_device: Arc::new(dev),
+        ts_device: Arc::clone(&dev),
     });
 
     let app = Router::new()
