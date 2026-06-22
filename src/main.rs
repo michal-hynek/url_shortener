@@ -1,11 +1,13 @@
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::Result;
 use axum::{Router, routing::post};
 use clap::Parser;
+use hyper_util::{rt::TokioIo, service::TowerToHyperService};
 use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::SqliteConnectionManager;
 use tailscale::{Config, Device};
+use tower::util::ServiceExt;
 
 use crate::api::LinkRepository;
 
@@ -66,16 +68,32 @@ async fn main() -> Result<()> {
 
     let app = Router::new()
         .route("/links", post(crate::api::create_link))
+        .layer(axum::middleware::from_fn_with_state(Arc::clone(&state), crate::api::verify_tailscale_identity))
         .with_state(state);
 
     println!("Starting up tailscale TCP listener");
     let listener = dev
         .tcp_listen((dev.ipv4_addr().await?, args.server_port).into())
         .await?;
+
     let url = format!("{}", listener.local_addr());
     println!("Listening on {}", &url);
 
-    axum::serve(tailscale::axum::Listener::from(listener), app).await?;
+    while let Ok(stream) = listener.accept().await {
+        let router = app.clone();
+        let remote_addr = stream.remote_addr();
+        let make_service = router.into_make_service_with_connect_info::<SocketAddr>();
+
+        tokio::spawn(async move {
+            let Ok(connection_service) = make_service.oneshot(remote_addr).await;
+            let io = TokioIo::new(stream);
+            let hyper_service = TowerToHyperService::new(connection_service);
+
+            let _ = hyper_util::server::conn::auto::Builder::new(hyper_util::rt::TokioExecutor::new())
+                .serve_connection(io, hyper_service)
+                .await;
+        });
+    }
 
     Ok(())
 }

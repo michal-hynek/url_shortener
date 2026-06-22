@@ -1,7 +1,7 @@
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::Result;
-use axum::{Json, extract::State, http::StatusCode, response::{IntoResponse, Response}};
+use axum::{Json, body::Body, extract::{ConnectInfo, State}, http::{Request, StatusCode}, middleware::Next, response::{IntoResponse, Response}};
 use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::OptionalExtension;
@@ -95,6 +95,17 @@ impl LinkRepository {
 
         Ok(())
     }
+}
+
+pub async fn verify_tailscale_identity(
+    State(state): State<Arc<AppState>>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    request: Request<Body>,
+    next: Next,
+) -> Result<Response, StatusCode> {
+    println!("{}", addr.ip());
+
+    Ok(next.run(request).await)
 }
 
 pub async fn create_link(State(app_state): State<Arc<AppState>>,  Json(payload): Json<CreateLinkRequest>) -> Response {

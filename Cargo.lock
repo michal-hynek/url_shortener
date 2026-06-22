@@ -3230,6 +3230,7 @@ dependencies = [
  "anyhow",
  "axum",
  "clap",
+ "hyper-util",
  "r2d2",
  "r2d2_sqlite",
  "rusqlite",
@@ -3238,6 +3239,7 @@ dependencies = [
  "tailscale",
  "thiserror",
  "tokio",
+ "tower",
 ]
 
 [[package]]
