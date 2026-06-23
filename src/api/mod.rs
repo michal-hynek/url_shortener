@@ -103,7 +103,22 @@ pub async fn verify_tailscale_identity(
     request: Request<Body>,
     next: Next,
 ) -> Result<Response, StatusCode> {
-    println!("{}", addr.ip());
+    let source_ip = addr.ip();
+    let ts_node = state.ts_device.peer_by_tailnet_ip(source_ip)
+        .await
+        .map_err(|e| {
+            eprintln!("error when retrieving tailscale identify - {e}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    let ts_node = if let Some(ts_node) = ts_node {
+        ts_node
+    } else {
+        return Err(StatusCode::FORBIDDEN);
+    };
+
+    println!("ts_node.id = {:?}", ts_node.id);
+    println!("ts_node.hostname = {:?}", ts_node.hostname);
 
     Ok(next.run(request).await)
 }
