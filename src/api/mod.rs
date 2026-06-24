@@ -89,7 +89,7 @@ impl LinkRepository {
         }
 
         connection.execute(
-            "insert into links(alias, url, user) values(:alias, :url, :user)",
+            "insert into links(alias, url, owner) values(:alias, :url, :owner)",
             &[(":alias", &alias), (":url", &url), (":user", &user)],
         )?;
 
