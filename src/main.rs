@@ -20,6 +20,12 @@ struct AppState {
     ts_device: Arc<Device>,
 }
 
+struct ClientIdentity {
+    stable_id: String,
+    hostname: String,
+    tailnet: Option<String>,
+}
+
 fn init_db_pool(db_path: &str) -> Result<Pool<SqliteConnectionManager>> {
     let manager = SqliteConnectionManager::file(db_path);
     let pool = Pool::builder()
