@@ -1,14 +1,14 @@
 use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::Result;
-use axum::{Json, body::Body, extract::{ConnectInfo, State}, http::{Request, StatusCode}, middleware::Next, response::{IntoResponse, Response}};
+use axum::{Extension, Json, body::Body, extract::{ConnectInfo, State}, http::{Request, StatusCode}, middleware::Next, response::{IntoResponse, Response}};
 use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::OptionalExtension;
 use serde::Deserialize;
 use thiserror::Error;
 
-use crate::AppState;
+use crate::{AppState, ClientIdentity};
 
 #[derive(Error, Debug)]
 pub enum ApiError {
@@ -100,7 +100,7 @@ impl LinkRepository {
 pub async fn verify_tailscale_identity(
     State(state): State<Arc<AppState>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
-    request: Request<Body>,
+    mut request: Request<Body>,
     next: Next,
 ) -> Result<Response, StatusCode> {
     let source_ip = addr.ip();
@@ -117,14 +117,22 @@ pub async fn verify_tailscale_identity(
         return Err(StatusCode::FORBIDDEN);
     };
 
-    println!("ts_node.id = {:?}", ts_node.id);
-    println!("ts_node.hostname = {:?}", ts_node.hostname);
+    let client = ClientIdentity {
+        stable_id: ts_node.stable_id.0,
+        hostname: ts_node.hostname,
+        tailnet: ts_node.tailnet,
+    };
 
+    request.extensions_mut().insert(client);
     Ok(next.run(request).await)
 }
 
-pub async fn create_link(State(app_state): State<Arc<AppState>>,  Json(payload): Json<CreateLinkRequest>) -> Response {
-    match app_state.repository.create_link(payload.alias.clone(), payload.url, "test_user".into()).await {
+pub async fn create_link(
+    State(app_state): State<Arc<AppState>>,
+    Extension(client): Extension<ClientIdentity>,
+    Json(payload): Json<CreateLinkRequest>,
+) -> Response {
+    match app_state.repository.create_link(payload.alias.clone(), payload.url, client.id()).await {
         Ok(_) => CreateLinkResponse { alias: payload.alias }.into_response(),
         Err(e) => {
             eprintln!("{:?}", e);

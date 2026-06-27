@@ -20,10 +20,17 @@ struct AppState {
     ts_device: Arc<Device>,
 }
 
+#[derive(Clone)]
 struct ClientIdentity {
     stable_id: String,
     hostname: String,
     tailnet: Option<String>,
+}
+
+impl ClientIdentity {
+    pub fn id(&self) -> String {
+        format!("{}@{}", self.hostname, self.tailnet.as_deref().unwrap_or_default())
+    }
 }
 
 fn init_db_pool(db_path: &str) -> Result<Pool<SqliteConnectionManager>> {
