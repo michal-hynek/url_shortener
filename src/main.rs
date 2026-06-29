@@ -28,6 +28,9 @@ struct ClientIdentity {
 }
 
 impl ClientIdentity {
+    // tailscale crate doesn't support deriving the user ID from the node
+    // user ID would be a better approach as a single user can own multiple nodes
+    // TODO: update the function to use the user ID if/when the taiscale supports the relation between users and nodes
     pub fn id(&self) -> String {
         format!("{}@{}", self.hostname, self.tailnet.as_deref().unwrap_or_default())
     }
