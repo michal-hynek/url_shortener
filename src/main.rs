@@ -72,7 +72,8 @@ async fn main() -> Result<()> {
     unsafe {
         std::env::set_var("TS_RS_EXPERIMENT", "this_is_unstable_software");
     }
-    let config = Config::default_with_key_file("tsrs_keys.json").await?;
+    let mut config = Config::default_with_key_file("tsrs_keys.json").await?;
+    config.requested_hostname = Some(args.ts_node_name);
     let auth_key = std::env::var("TS_AUTHKEY").ok();
     let dev = Arc::new(Device::new(&config, auth_key).await?);
 
