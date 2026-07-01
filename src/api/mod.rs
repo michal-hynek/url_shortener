@@ -118,7 +118,6 @@ pub async fn verify_tailscale_identity(
     };
 
     let client = ClientIdentity {
-        stable_id: ts_node.stable_id.0,
         hostname: ts_node.hostname,
         tailnet: ts_node.tailnet,
     };

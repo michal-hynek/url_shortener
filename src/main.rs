@@ -22,7 +22,6 @@ struct AppState {
 
 #[derive(Clone)]
 struct ClientIdentity {
-    stable_id: String,
     hostname: String,
     tailnet: Option<String>,
 }
