@@ -5,7 +5,7 @@ use axum::{Extension, Json, body::Body, extract::{ConnectInfo, State}, http::{Re
 use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::OptionalExtension;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{AppState, ClientIdentity};
@@ -65,6 +65,13 @@ impl IntoResponse for CreateLinkResponse {
     }
 }
 
+#[derive(Serialize)]
+pub struct Link {
+    alias: String,
+    url: String,
+    owner: String,
+}
+
 #[derive(Clone)]
 pub struct LinkRepository {
     connection_pool: Pool<SqliteConnectionManager>,
@@ -94,6 +101,10 @@ impl LinkRepository {
         )?;
 
         Ok(())
+    }
+
+    pub async fn get_links(&self) -> Result<Vec<Link>, ApiError> {
+        todo!()
     }
 }
 
@@ -133,6 +144,16 @@ pub async fn create_link(
 ) -> Response {
     match app_state.repository.create_link(payload.alias.clone(), payload.url, client.id()).await {
         Ok(_) => CreateLinkResponse { alias: payload.alias }.into_response(),
+        Err(e) => {
+            eprintln!("{:?}", e);
+            e.into_response()
+        }
+    }
+}
+
+pub async fn get_links(State(app_state): State<Arc<AppState>>) -> Response {
+    match app_state.repository.get_links().await {
+        Ok(links) => (StatusCode::OK, Json(serde_json::json!(links))).into_response(),
         Err(e) => {
             eprintln!("{:?}", e);
             e.into_response()
