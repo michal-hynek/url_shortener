@@ -4,7 +4,7 @@ use anyhow::Result;
 use axum::{Extension, Json, body::Body, extract::{ConnectInfo, State}, http::{Request, StatusCode}, middleware::Next, response::{IntoResponse, Response}};
 use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
-use rusqlite::OptionalExtension;
+use rusqlite::{OptionalExtension, fallible_iterator::FallibleIterator};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -104,7 +104,20 @@ impl LinkRepository {
     }
 
     pub async fn get_links(&self) -> Result<Vec<Link>, ApiError> {
-        todo!()
+        let connection = self.connection_pool.get()?;
+
+        let links = connection.prepare("select * from links")?
+            .query([])?
+            .map(|row| Ok(
+                Link {
+                    alias: row.get("alias")?,
+                    url: row.get("url")?,
+                    owner: row.get("owner")?,
+                })
+            )
+            .collect::<Vec<Link>>()?;
+
+        Ok(links)
     }
 }
 
