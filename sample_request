@@ -1,1 +1,0 @@
-curl -X POST -H "content-type: application/json" <tailscale_ip>:8000/links --data '{ "alias": "foo", "url": "google.ca" }'
