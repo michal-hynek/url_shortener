@@ -3,3 +3,6 @@ curl -X POST -H "content-type: application/json" <tailscale_ip>:8000/links --dat
 
 # get all links
 curl -X GET <tailscale_ip>:8000/links
+
+# get a single link
+curl -X GET <tailscale_ip>:8000/links/<alias>
