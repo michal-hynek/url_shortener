@@ -84,6 +84,7 @@ async fn main() -> Result<()> {
 
     let app = Router::new()
         .route("/links", get(crate::api::get_links))
+        .route("/links/{alias}", get(crate::api::get_link))
         .route("/links", post(crate::api::create_link))
         .layer(axum::middleware::from_fn_with_state(Arc::clone(&state), crate::api::verify_tailscale_identity))
         .with_state(state);

@@ -1,7 +1,7 @@
 use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::Result;
-use axum::{Extension, Json, body::Body, extract::{ConnectInfo, State}, http::{Request, StatusCode}, middleware::Next, response::{IntoResponse, Response}};
+use axum::{Extension, Json, body::Body, extract::{ConnectInfo, Path, State}, http::{Request, StatusCode}, middleware::Next, response::{IntoResponse, Response}};
 use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{OptionalExtension, fallible_iterator::FallibleIterator};
@@ -119,6 +119,11 @@ impl LinkRepository {
 
         Ok(links)
     }
+
+    pub async fn get_link(&self, alias: &str) -> Result<Link, ApiError> {
+        // TODO: call the DB
+        Ok(Link { alias: alias.to_string(), url: "foo.bar".to_string(), owner: "test".to_string() })
+    }
 }
 
 pub async fn verify_tailscale_identity(
@@ -167,6 +172,16 @@ pub async fn create_link(
 pub async fn get_links(State(app_state): State<Arc<AppState>>) -> Response {
     match app_state.repository.get_links().await {
         Ok(links) => (StatusCode::OK, Json(serde_json::json!(links))).into_response(),
+        Err(e) => {
+            eprintln!("{:?}", e);
+            e.into_response()
+        }
+    }
+}
+
+pub async fn get_link(State(app_state): State<Arc<AppState>>, Path(alias): Path<String>) -> Response {
+    match app_state.repository.get_link(&alias).await {
+        Ok(link) => (StatusCode::OK, Json(serde_json::json!(link))).into_response(),
         Err(e) => {
             eprintln!("{:?}", e);
             e.into_response()
