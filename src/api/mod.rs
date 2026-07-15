@@ -120,9 +120,21 @@ impl LinkRepository {
         Ok(links)
     }
 
-    pub async fn get_link(&self, alias: &str) -> Result<Link, ApiError> {
-        // TODO: call the DB
-        Ok(Link { alias: alias.to_string(), url: "foo.bar".to_string(), owner: "test".to_string() })
+    pub async fn get_link(&self, alias: &str) -> Result<Option<Link>, ApiError> {
+        let connection = self.connection_pool.get()?;
+        let link = connection.query_one("select * from links where alias = :alias",
+            &[(":alias", alias)],
+            |row| {
+                Ok(
+                    Link {
+                        alias: row.get("alias")?,
+                        url: row.get("url")?,
+                        owner: row.get("owner")?,
+                    }
+                )
+            }).optional()?;
+        
+        Ok(link)
     }
 }
 
@@ -181,7 +193,12 @@ pub async fn get_links(State(app_state): State<Arc<AppState>>) -> Response {
 
 pub async fn get_link(State(app_state): State<Arc<AppState>>, Path(alias): Path<String>) -> Response {
     match app_state.repository.get_link(&alias).await {
-        Ok(link) => (StatusCode::OK, Json(serde_json::json!(link))).into_response(),
+        Ok(link) => {
+            match link {
+                Some(link) => (StatusCode::OK, Json(serde_json::json!(link))).into_response(),
+                None => (StatusCode::NOT_FOUND).into_response()
+            }
+        },
         Err(e) => {
             eprintln!("{:?}", e);
             e.into_response()
