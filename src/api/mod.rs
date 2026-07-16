@@ -136,6 +136,10 @@ impl LinkRepository {
         
         Ok(link)
     }
+
+    pub async fn delete_link(&self, alias: &str) -> Result<(), ApiError> {
+        todo!()
+    }
 }
 
 pub async fn verify_tailscale_identity(
@@ -199,6 +203,16 @@ pub async fn get_link(State(app_state): State<Arc<AppState>>, Path(alias): Path<
                 None => (StatusCode::NOT_FOUND).into_response()
             }
         },
+        Err(e) => {
+            eprintln!("{:?}", e);
+            e.into_response()
+        }
+    }
+}
+
+pub async fn delete_link(State(app_state): State<Arc<AppState>>, Path(alias): Path<String>) -> Response {
+    match app_state.repository.delete_link(&alias).await {
+        Ok(_) => (StatusCode::OK).into_response(),
         Err(e) => {
             eprintln!("{:?}", e);
             e.into_response()
