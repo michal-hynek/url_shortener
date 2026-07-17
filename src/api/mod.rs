@@ -15,6 +15,9 @@ pub enum ApiError {
     #[error("duplicate_alias")]
     DuplicateAlias(String),
 
+    #[error("alias_not_found")]
+    AliasNotFound(String),
+
     #[error("internal")]
     Internal(#[from] anyhow::Error),
 }
@@ -23,6 +26,7 @@ impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, body) = match &self {
             ApiError::DuplicateAlias(alias) => (StatusCode::CONFLICT, format!("duplicate alias {alias}").to_string()),
+            ApiError::AliasNotFound(alias) => (StatusCode::NOT_FOUND, format!("alias {alias} not found").to_string()),
             ApiError::Internal(_) => (StatusCode::INTERNAL_SERVER_ERROR, "internal error".to_string()),
         };
 
@@ -138,7 +142,14 @@ impl LinkRepository {
     }
 
     pub async fn delete_link(&self, alias: &str) -> Result<(), ApiError> {
-        todo!()
+        let connection = self.connection_pool.get()?;
+        let rows_updated = connection.execute("delete from links where alias = :alias", &[(":alias", alias)])?;
+
+        if rows_updated > 0 {
+            Ok(())
+        } else {
+            Err(ApiError::AliasNotFound(alias.to_string()))
+        }
     }
 }
 
