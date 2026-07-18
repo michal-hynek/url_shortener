@@ -6,3 +6,6 @@ curl -X GET <tailscale_ip>:8000/links
 
 # get a single link
 curl -X GET <tailscale_ip>:8000/links/<alias>
+
+# delete a link
+curl -X DELETE <tailscale_ip>:8000/links/<alias>
