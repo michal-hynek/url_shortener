@@ -56,6 +56,11 @@ pub struct CreateLinkResponse {
     alias: String,
 }
 
+#[derive(Deserialize, Clone)]
+pub struct UpdateLinkRequest {
+    url: String,
+}
+
 impl IntoResponse for CreateLinkResponse {
     fn into_response(self) -> Response {
         let body = serde_json::json!({
@@ -141,6 +146,10 @@ impl LinkRepository {
         Ok(link)
     }
 
+    pub async fn update_link(&self, alias: &str, updated_url: &str) -> Result<(), ApiError> {
+        Ok(())
+    }
+
     pub async fn delete_link(&self, alias: &str) -> Result<(), ApiError> {
         let connection = self.connection_pool.get()?;
         let rows_updated = connection.execute("delete from links where alias = :alias", &[(":alias", alias)])?;
@@ -214,6 +223,20 @@ pub async fn get_link(State(app_state): State<Arc<AppState>>, Path(alias): Path<
                 None => (StatusCode::NOT_FOUND).into_response()
             }
         },
+        Err(e) => {
+            eprintln!("{:?}", e);
+            e.into_response()
+        }
+    }
+}
+
+pub async fn update_link(
+    State(app_state): State<Arc<AppState>>,
+    Path(alias): Path<String>,
+    Json(updated_link): Json<UpdateLinkRequest>,
+) -> Response {
+    match app_state.repository.update_link(&alias, &updated_link.url).await {
+        Ok(_) => (StatusCode::OK).into_response(),
         Err(e) => {
             eprintln!("{:?}", e);
             e.into_response()

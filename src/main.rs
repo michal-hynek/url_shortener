@@ -1,7 +1,7 @@
 use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::Result;
-use axum::{Router, routing::{delete, get, post}};
+use axum::{Router, routing::{delete, get, post, put}};
 use clap::Parser;
 use hyper_util::{rt::TokioIo, service::TowerToHyperService};
 use r2d2::{Pool, PooledConnection};
@@ -84,9 +84,10 @@ async fn main() -> Result<()> {
 
     let app = Router::new()
         .route("/links", get(crate::api::get_links))
-        .route("/links/{alias}", get(crate::api::get_link))
-        .route("/links/{alias}", delete(crate::api::delete_link))
         .route("/links", post(crate::api::create_link))
+        .route("/links/{alias}", get(crate::api::get_link))
+        .route("/links/{alias}", put(crate::api::update_link))
+        .route("/links/{alias}", delete(crate::api::delete_link))
         .layer(axum::middleware::from_fn_with_state(Arc::clone(&state), crate::api::verify_tailscale_identity))
         .with_state(state);
 
