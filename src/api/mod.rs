@@ -147,7 +147,15 @@ impl LinkRepository {
     }
 
     pub async fn update_link(&self, alias: &str, updated_url: &str) -> Result<(), ApiError> {
-        Ok(())
+        let connection = self.connection_pool.get()?;
+        let updated_rows = connection.execute("update links set url = :url where alias = :alias",
+            &[(":alias", alias), (":url", updated_url)])?;
+        
+        if updated_rows > 0 {
+            Ok(())
+        } else {
+            Err(ApiError::AliasNotFound(alias.to_string()))
+        }
     }
 
     pub async fn delete_link(&self, alias: &str) -> Result<(), ApiError> {
