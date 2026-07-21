@@ -7,5 +7,8 @@ curl -X GET <tailscale_ip>:8000/links
 # get a single link
 curl -X GET <tailscale_ip>:8000/links/<alias>
 
+# update a link
+curl -X PUT <tailscale_ip>:8000/links/<alias> -H "content-type: application/json" --data '{ "url": "google.ca" }'
+
 # delete a link
 curl -X DELETE <tailscale_ip>:8000/links/<alias>
