@@ -1,7 +1,7 @@
 use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::Result;
-use axum::{Extension, Json, body::Body, extract::{ConnectInfo, Path, State}, http::{Request, StatusCode}, middleware::Next, response::{IntoResponse, Response}};
+use axum::{Extension, Json, body::Body, extract::{ConnectInfo, Path, State}, http::{Request, StatusCode, header::LOCATION}, middleware::Next, response::{AppendHeaders, IntoResponse, Response}};
 use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{OptionalExtension, fallible_iterator::FallibleIterator};
@@ -52,26 +52,9 @@ pub struct CreateLinkRequest {
     url: String,
 }
 
-pub struct CreateLinkResponse {
-    alias: String,
-}
-
 #[derive(Deserialize, Clone)]
 pub struct UpdateLinkRequest {
     url: String,
-}
-
-impl IntoResponse for CreateLinkResponse {
-    fn into_response(self) -> Response {
-        let body = serde_json::json!({
-            "message": format!("added alias {}", self.alias),
-        });
-
-        (
-            StatusCode::OK,
-            Json(body),
-        ).into_response()
-    }
 }
 
 #[derive(Serialize)]
@@ -205,7 +188,15 @@ pub async fn create_link(
     Json(payload): Json<CreateLinkRequest>,
 ) -> Response {
     match app_state.repository.create_link(payload.alias.clone(), payload.url, client.id()).await {
-        Ok(_) => CreateLinkResponse { alias: payload.alias }.into_response(),
+        Ok(_) => {
+            (
+                StatusCode::OK,
+                AppendHeaders([
+                    (LOCATION, format!("/links/{}", payload.alias))
+                ])
+            ).into_response()
+        },
+
         Err(e) => {
             eprintln!("{:?}", e);
             e.into_response()
