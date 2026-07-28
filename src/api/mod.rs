@@ -190,7 +190,7 @@ pub async fn create_link(
     match app_state.repository.create_link(payload.alias.clone(), payload.url, client.id()).await {
         Ok(_) => {
             (
-                StatusCode::OK,
+                StatusCode::CREATED,
                 AppendHeaders([
                     (LOCATION, format!("/links/{}", payload.alias))
                 ])
